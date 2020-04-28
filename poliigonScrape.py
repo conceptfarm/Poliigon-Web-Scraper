@@ -205,7 +205,9 @@ try:
 		for i in range(len(titles)):
 			makeSurePathExists(downloadRoot+titles[i])
 			openCategory(titles[i])
-	
+	else:
+		print("No new textures to scrape, to override - delete the poliigonScrapePrev.txt\nPress ENTER to quit...")
+		input()
 	browser.quit()
 	
 except TimeoutException:
