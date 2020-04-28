@@ -92,20 +92,20 @@ def parseItemsInSubCategory(category, subCat):
 			dims = [x.text for x in dims]
 			#print(sampleName)
 			print(dims)
-			makeSurePathExists(downloadRoot + category+'//'+ subCat + '//' + sampleName)
+			makeSurePathExists(downloadRoot + category +'//'+ subCat + '//' + sampleName)
 			
 			if (dims!=['']):
 				convertedDims = parseDimensionString(dims[0])
-				f = open((downloadRoot + category+'//'+ subCat + '//' + sampleName + '//' + 'dimensions.txt'), "w")
+				f = open((downloadRoot + category +'//'+ subCat + '//' + sampleName + '//' + 'dimensions.txt'), "w")
 				f.write(str(convertedDims))
 				f.close()
 			
-			f = open((downloadRoot + category+'//'+ subCat + '//' + sampleName + '//' + 'webSource.txt'), "w")
+			f = open((downloadRoot + category +'//'+ subCat + '//' + sampleName + '//' + 'webSource.txt'), "w")
 			f.write(str(link))
 			f.close()
-
+			filename, file_extension = os.path.splitext(images[0])
 			#there are two images: large and small, large is found first, so we get that one, could test for subdir /large/sphere.jpg vs /small/sphere.jpg
-			filename, headers = opener.retrieve(images[0], (downloadRoot + category+'//'+ subCat + '//' + sampleName + '//' + sampleName + '_tn.jpg'))
+			filename, headers = opener.retrieve(images[0], (downloadRoot + category+'//'+ subCat + '//' + sampleName + '//' + sampleName + '_tn'+ file_extension))
 			browser.find_element_by_tag_name('body').send_keys(Keys.CONTROL + 'w') 
 		except TimeoutException:
 			print('Timed out waiting for page to load')
@@ -171,17 +171,43 @@ makeSurePathExists(downloadRoot)
 
 try:
 	WebDriverWait(browser, timeout).until(EC.visibility_of_element_located((By.XPATH, "//span[@class='facet-name']")))
-	# find_elements_by_xpath returns an array of selenium objects.
-	topCategories = browser.find_elements_by_xpath("//a[@class='facet-item ']")
-	# use list comprehension to get the actual category titles and not the selenium objects.
-	titles = [x.text for x in topCategories]
+	texturesAmountText = browser.find_elements_by_xpath("//span[@class='ais-Stats-text']")
+	texturesAmount = re.findall(u"\d+", (texturesAmountText[0]).text)
+	print(texturesAmount[0])
 	
-	#for each category title open the category link
-	#for i in range(13,14,1):
-	for i in range(len(titles)):
-		makeSurePathExists(downloadRoot+titles[i])
-		openCategory(titles[i])
+	doScrape = False
+	f = open(('poliigonScrapePrev.txt'), "a+")
+	try:
+		f.seek(0)
+		prevScraped = int(f.readline())
+		print(prevScraped)
+		if prevScraped < int(texturesAmount[0]):
+			f.seek(0)
+			f.truncate()
+			f.write(str(texturesAmount[0]))
+			doScrape = True
+	except:
+		f.seek(0)
+		f.truncate()
+		f.write(str(texturesAmount[0]))
+		doScrape = True
+
+	f.close()
+
+	if doScrape:
+		# find_elements_by_xpath returns an array of selenium objects.
+		topCategories = browser.find_elements_by_xpath("//a[@class='facet-item ']")
+		# use list comprehension to get the actual category titles and not the selenium objects.
+		titles = [x.text for x in topCategories]
+		
+		#for each category title open the category link
+		for i in range(6,len(titles),1):
+		#for i in range(len(titles)):
+			makeSurePathExists(downloadRoot+titles[i])
+			openCategory(titles[i])
+	
 	browser.quit()
+	
 except TimeoutException:
 	print('Timed out waiting for page to load')
 	browser.quit()
