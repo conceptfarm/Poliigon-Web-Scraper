@@ -201,8 +201,8 @@ try:
 		titles = [x.text for x in topCategories]
 		
 		#for each category title open the category link
-		for i in range(6,len(titles),1):
-		#for i in range(len(titles)):
+		#for i in range(6,len(titles),1):
+		for i in range(len(titles)):
 			makeSurePathExists(downloadRoot+titles[i])
 			openCategory(titles[i])
 	
