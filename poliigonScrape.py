@@ -10,6 +10,7 @@ import sys
 import os
 import errno
 import urllib.request
+import glob
 
 from selenium import webdriver 
 from selenium.webdriver.common.by import By
@@ -19,22 +20,31 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 
 
+#Firefox driver
+firefox_profile = webdriver.FirefoxProfile()
+firefox_profile.set_preference("browser.privatebrowsing.autostart", True)
+browser = webdriver.Firefox(executable_path='C:\\webDrivers\\geckodriver.exe', firefox_profile=firefox_profile)
 
-downloadRoot = 'c:/poliigon/'
-
+'''
+#Chrome Driver
 option = webdriver.ChromeOptions()
 option.add_argument(' — incognito')
 browser = webdriver.Chrome(executable_path='C:\\webDrivers\\chromedriver.exe', chrome_options=option)
+'''
+
+
 browser.get('https://www.poliigon.com/search?type=texture')
 
 urlRoot = 'https://www.poliigon.com/search?'
 urlType = '&type=texture'
 
+downloadRoot = 'c:/poliigon/'
 timeout = 20 # Wait 20 seconds for page to load
+newDownloads = 0
 
 #assign a header for the urllib, otherwise 403 Forbidden
 opener = urllib.request.URLopener()
-opener.addheader('User-Agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36')
+opener.addheader('User-Agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.2171.95 Safari/537.36')
 
 
 def makeSurePathExists(path):
@@ -75,41 +85,50 @@ def isNum(s):
 
 #each subcategory has a list of sphere samples with links to the sample 
 def parseItemsInSubCategory(category, subCat):
-	sampleGrid =  browser.find_elements_by_xpath("//a[@class='deadLink']")
+	sampleGrid = browser.find_elements_by_xpath("//a[@class='deadLink']")
 	links = [x.get_attribute("href") for x in sampleGrid]
-	
-	#for each sphere sample in sub category page open a new tab
-	for link in links:
-		browser.find_element_by_tag_name('body').send_keys(Keys.CONTROL + 't') 
-		browser.get(link)
-		try:
-			WebDriverWait(browser, timeout).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='slick-slide slick-current slick-active']")))
-			imgDiv =  browser.find_elements_by_xpath("//div[@class='slick-slide slick-current slick-active']/img")
-			images = [x.get_attribute('src') for x in imgDiv]
-			print(images)
-			sampleName = (browser.find_elements_by_xpath("//h2[@id='name']"))[0].text
-			dims = (browser.find_elements_by_xpath("//span[@id='real_scale']"))
-			dims = [x.text for x in dims]
-			#print(sampleName)
-			print(dims)
-			makeSurePathExists(downloadRoot + category +'//'+ subCat + '//' + sampleName)
-			
-			if (dims!=['']):
-				convertedDims = parseDimensionString(dims[0])
-				f = open((downloadRoot + category +'//'+ subCat + '//' + sampleName + '//' + 'dimensions.txt'), "w")
-				f.write(str(convertedDims))
+
+	#getting innerHTML because the element is set to display:none;
+	WebDriverWait(browser, timeout).until(EC.presence_of_all_elements_located((By.XPATH, "//p[@class='name']")))
+	nameElements = browser.find_elements_by_xpath("//p[@class='name']")
+	names = [x.get_attribute('innerHTML') for x in nameElements]
+
+	#for each sphere sample in sub category page open a new tab invisibility_of_element_located
+	for link in range(len(links)):
+		#checks if file is already downloaded, don't know the ext so wildcard
+		checkFileExists = glob.glob(downloadRoot + category+'//'+ subCat + '//' + names[link] + '//' + names[link] + '_tn.*')
+		if not checkFileExists:
+			browser.find_element_by_tag_name('body').send_keys(Keys.CONTROL + 't') 
+			browser.get(links[link])
+			try:
+				WebDriverWait(browser, timeout).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='slick-slide slick-current slick-active']")))
+				imgDiv =  browser.find_elements_by_xpath("//div[@class='slick-slide slick-current slick-active']/img")
+				images = [x.get_attribute('src') for x in imgDiv]
+				print(images)
+				sampleName = (browser.find_elements_by_xpath("//h2[@id='name']"))[0].text
+				dims = (browser.find_elements_by_xpath("//span[@id='real_scale']"))
+				dims = [x.text for x in dims]
+				#print(sampleName)
+				print(dims)
+				makeSurePathExists(downloadRoot + category +'//'+ subCat + '//' + sampleName)
+				
+				if (dims!=['']):
+					convertedDims = parseDimensionString(dims[0])
+					f = open((downloadRoot + category +'//'+ subCat + '//' + sampleName + '//' + 'dimensions.txt'), "w")
+					f.write(str(convertedDims))
+					f.close()
+				
+				f = open((downloadRoot + category +'//'+ subCat + '//' + sampleName + '//' + 'webSource.txt'), "w")
+				f.write(str(links[link]))
 				f.close()
-			
-			f = open((downloadRoot + category +'//'+ subCat + '//' + sampleName + '//' + 'webSource.txt'), "w")
-			f.write(str(link))
-			f.close()
-			filename, file_extension = os.path.splitext(images[0])
-			#there are two images: large and small, large is found first, so we get that one, could test for subdir /large/sphere.jpg vs /small/sphere.jpg
-			filename, headers = opener.retrieve(images[0], (downloadRoot + category+'//'+ subCat + '//' + sampleName + '//' + sampleName + '_tn'+ file_extension))
-			browser.find_element_by_tag_name('body').send_keys(Keys.CONTROL + 'w') 
-		except TimeoutException:
-			print('Timed out waiting for page to load')
-			browser.close()
+				filename, file_extension = os.path.splitext(images[0])
+				#there are two images: large and small, large is found first, so we get that one, could test for subdir /large/sphere.jpg vs /small/sphere.jpg
+				filename, headers = opener.retrieve(images[0], (downloadRoot + category+'//'+ subCat + '//' + sampleName + '//' + sampleName + '_tn'+ file_extension))
+				newDownloads = newDownloads + 1
+				browser.find_element_by_tag_name('body').send_keys(Keys.CONTROL + 'w') 
+			except TimeoutException:
+				print('Timed out waiting for page to load')
+				browser.close()
 
 #category has subcategories ie: metal has (rusty, clean, stainless) subcategoires as well as several pages in each subcatoegory
 def openCategory(category):
@@ -201,14 +220,19 @@ try:
 		titles = [x.text for x in topCategories]
 		
 		#for each category title open the category link
-		#for i in range(6,len(titles),1):
-		for i in range(len(titles)):
+		for i in range(6,len(titles),1):
+		#for i in range(len(titles)):
 			makeSurePathExists(downloadRoot+titles[i])
 			openCategory(titles[i])
+		browser.quit()
+		print("Scrape finished with " + str(newDownloads) + " new downloads.\nTo redo - delete the poliigonScrapePrev.txt\nPress ENTER to quit...")
+		input()
+	
 	else:
+		browser.quit()
 		print("No new textures to scrape, to override - delete the poliigonScrapePrev.txt\nPress ENTER to quit...")
 		input()
-	browser.quit()
+	
 	
 except TimeoutException:
 	print('Timed out waiting for page to load')
