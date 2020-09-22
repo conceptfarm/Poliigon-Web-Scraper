@@ -85,6 +85,7 @@ def isNum(s):
 
 #each subcategory has a list of sphere samples with links to the sample 
 def parseItemsInSubCategory(category, subCat):
+	global newDownloads
 	sampleGrid = browser.find_elements_by_xpath("//a[@class='deadLink']")
 	links = [x.get_attribute("href") for x in sampleGrid]
 
@@ -124,7 +125,7 @@ def parseItemsInSubCategory(category, subCat):
 				filename, file_extension = os.path.splitext(images[0])
 				#there are two images: large and small, large is found first, so we get that one, could test for subdir /large/sphere.jpg vs /small/sphere.jpg
 				filename, headers = opener.retrieve(images[0], (downloadRoot + category+'//'+ subCat + '//' + sampleName + '//' + sampleName + '_tn'+ file_extension))
-				newDownloads = newDownloads + 1
+				newDownloads += 1
 				browser.find_element_by_tag_name('body').send_keys(Keys.CONTROL + 'w') 
 			except TimeoutException:
 				print('Timed out waiting for page to load')
@@ -219,8 +220,8 @@ try:
 		# use list comprehension to get the actual category titles and not the selenium objects.
 		titles = [x.text for x in topCategories]
 		
-		#for each category title open the category link
-		for i in range(6,len(titles),1):
+		for each category title open the category link
+		#for i in range(9,len(titles),1):
 		#for i in range(len(titles)):
 			makeSurePathExists(downloadRoot+titles[i])
 			openCategory(titles[i])
