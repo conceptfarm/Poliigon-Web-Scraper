@@ -220,9 +220,9 @@ try:
 		# use list comprehension to get the actual category titles and not the selenium objects.
 		titles = [x.text for x in topCategories]
 		
-		for each category title open the category link
+		#for each category title open the category link
 		#for i in range(9,len(titles),1):
-		#for i in range(len(titles)):
+		for i in range(len(titles)):
 			makeSurePathExists(downloadRoot+titles[i])
 			openCategory(titles[i])
 		browser.quit()
